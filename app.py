@@ -18,31 +18,17 @@ bert_model.to('cuda' if torch.cuda.is_available() else 'cpu')
 # Load SentenceTransformer for relevance scoring
 st_model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
 
-# Function to generate multiple tweet candidates with diversity
+# Function to generate multiple tweet candidates
 def generate_tweet_candidates(prompt, num_candidates=5, max_length=50):
     gpt2_model.eval()
     input_ids = gpt2_tokenizer.encode(prompt, return_tensors='pt').to('cuda' if torch.cuda.is_available() else 'cpu')
     
-    candidates = set()  # Using a set to ensure uniqueness
-    max_attempts = num_candidates * 2  # Allow retries in case of duplicates
-
-    for _ in range(max_attempts):
-        output = gpt2_model.generate(
-            input_ids, 
-            max_length=max_length, 
-            num_return_sequences=1, 
-            no_repeat_ngram_size=2, 
-            temperature=0.7,  # Control creativity
-            top_p=0.9,  # Nucleus sampling
-            top_k=50    # Limit to top-k tokens for diversity
-        )
-        tweet = gpt2_tokenizer.decode(output[0], skip_special_tokens=True)
-        candidates.add(tweet)
-
-        if len(candidates) >= num_candidates:  # Stop when enough unique tweets are generated
-            break
+    candidates = []
+    for _ in range(num_candidates):
+        output = gpt2_model.generate(input_ids, max_length=max_length, num_return_sequences=1, no_repeat_ngram_size=2)
+        candidates.append(gpt2_tokenizer.decode(output[0], skip_special_tokens=True))
     
-    return list(candidates)
+    return candidates
 
 # Function to rank tweets based on sentiment using BERT
 def rank_tweets_by_sentiment(tweets):
@@ -107,4 +93,4 @@ if st.button("Generate Tweets"):
         
         st.subheader("Final Ranked Tweets by Combined Sentiment & Relevance:")
         for tweet, score in ranked_by_combined:
-            st.write(f"Tweet: {tweet}, Combined Score: {score}")
+            st.write(f"Tweet: {tweet}, Combined Score: {score}") 
